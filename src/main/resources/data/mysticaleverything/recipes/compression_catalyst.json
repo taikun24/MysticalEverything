@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "BBB",
+    "BAB",
+    "BBB"
+  ],
+    "key": {
+      "A": {
+        "item": "minecraft:slime_ball"
+      },
+      "B": {
+        "item": "mysticalagriculture:inferium_essence"
+      }
+    },
+    "result": {
+      "item": "mysticaleverything:compression_catalyst",
+      "count": 1
+    }
+}

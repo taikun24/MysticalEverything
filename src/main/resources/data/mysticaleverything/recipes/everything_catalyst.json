@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABA",
+    "BAB",
+    "ABA"
+  ],
+  "key": {
+    "A": {
+      "item": "mysticalagriculture:supremium_essence"
+    },
+    "B": {
+      "item": "mysticalagriculture:imperium_essence"
+    }
+  },
+  "result": {
+    "item": "mysticaleverything:everything_catalyst"
+  }
+}

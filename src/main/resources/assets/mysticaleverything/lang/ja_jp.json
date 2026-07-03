@@ -1,0 +1,10 @@
+{
+  "item.mysticaleverything.everything_catalyst": "万物の触媒",
+  "creativetab.my_custom_tab": "Mystical Everything",
+  "description.mysticaleverything.everything_catalyst.1": "素材の種を作るために使用される触媒。",
+  "description.mysticaleverything.everything_catalyst.2": "外側の注入の祭壇に触媒を、内側の祭壇に素材の圧縮された触媒を、中央の台座にプロスペリティの基底種を置いてください。",
+  "description.mysticaleverything.everything_catalyst.3": "素材の圧縮された触媒を作るには、作業台で中央に圧縮の触媒を置き、周囲に8個のエッセンスを配置してください。",
+  "description.mysticaleverything.everything_catalyst.4": "素材を作るには、作業台で9個のエッセンスをクラフトしてください。",
+  "item.mysticaleverything.compression_catalyst": "圧縮の触媒",
+  "item.mysticaleverything.compression_catalyst.compressed": "%sの圧縮された触媒"
+}
