@@ -1,0 +1,10 @@
+{
+  "item.mysticaleverything.everything_catalyst": "Everything Catalyst",
+  "creativetab.my_custom_tab": "Mystical Everything",
+  "description.mysticaleverything.everything_catalyst.1": "A catalyst used to create a seed of material.",
+  "description.mysticaleverything.everything_catalyst.2": "Place the catalyst on the outer infusion altar, the compression catalyst of the material on the inner infusion altar, and the Prosperity seed base on the central pedestal.",
+  "description.mysticaleverything.everything_catalyst.3": "To create a compression catalyst of a material, place the compression catalyst in the center of a crafting table and surround it with 8 essences.",
+  "description.mysticaleverything.everything_catalyst.4": "To create a material, craft 9 essences in a crafting table.",
+  "item.mysticaleverything.compression_catalyst": "Compression Catalyst",
+  "item.mysticaleverything.compression_catalyst.compressed": "Compression Catalyst Of %s"
+}

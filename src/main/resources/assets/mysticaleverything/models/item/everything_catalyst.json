@@ -1,0 +1,7 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "mysticaleverything:item/everything_catalyst",
+    "particle": "mysticaleverything:item/everything_catalyst"
+  }
+}
