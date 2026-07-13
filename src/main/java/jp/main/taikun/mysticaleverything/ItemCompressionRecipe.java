@@ -37,7 +37,7 @@ public class ItemCompressionRecipe extends CustomRecipe {
                         return false;
                     }
                 } else {
-                    if (Mysticaleverything.isNotSameItem(first, current)) {
+                    if (!ItemStack.isSameItemSameComponents(first, current)) {
                         return false;
                     }
                 }
@@ -53,6 +53,7 @@ public class ItemCompressionRecipe extends CustomRecipe {
         if (Config.DISABLE_NBT.get()) {
             first = first.copy();
             first.set(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+            Mysticaleverything.LOGGER.info("hi");
         }
         ItemStack catalyst = new ItemStack(Mysticaleverything.COMPRESSION_CATALYST.get());
         TagItemHelper.setResource(catalyst, first);

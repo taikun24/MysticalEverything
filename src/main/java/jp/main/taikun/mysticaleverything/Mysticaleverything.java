@@ -2,6 +2,7 @@ package jp.main.taikun.mysticaleverything;
 
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -66,13 +67,6 @@ public class Mysticaleverything {
         BLOCK_ENTITIES.register(bus);
         RECIPE_SERIALIZERS.register(bus);
         CREATIVE_MODE_TABS.register(bus);
-    }
-
-    public static boolean isNotSameItem(ItemStack itemStack, ItemStack target) {
-        CompoundTag targetTag = target.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        boolean isSameItem = target.is(itemStack.getItem());
-        boolean isSameTag = targetTag.equals(itemStack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag());
-        return (!isSameItem || !isSameTag);
     }
 
 }

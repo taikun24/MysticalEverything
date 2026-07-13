@@ -12,7 +12,7 @@ public class Config {
 
     static{
         BUILDER.push("Config");
-        DISABLE_NBT = BUILDER.comment("NBTも含めて作物にするか？(true→いいえ)").define("disableNBT", true);
+        DISABLE_NBT = BUILDER.comment("NBTも含めて作物にするか？(true→いいえ)").define("disableNBT", false);
         BUILDER.pop();
         CONFIG_SPEC = BUILDER.build();
     }

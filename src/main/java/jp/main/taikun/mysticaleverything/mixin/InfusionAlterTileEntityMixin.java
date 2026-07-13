@@ -71,13 +71,14 @@ public class InfusionAlterTileEntityMixin {
     }
     @Unique
     public boolean mysticaleverything$doesntMatchItem(RecipeInput inventory, int slot, ItemStack itemStack){
-        return Mysticaleverything.isNotSameItem(inventory.getItem(slot), itemStack);
+        return !ItemStack.isSameItemSameComponents(inventory.getItem(slot), itemStack);
     }
     @Unique
     public boolean mysticaleverything$isPatternValid(RecipeInput inventory) {
         if (mysticaleverything$doesntMatchItem(inventory, 0, ModItems.PROSPERITY_SEED_BASE.get().getDefaultInstance())) {
             return false;
         }
+        if (inventory.size() != 9) return false;
         int[] essenceIndex = new int[]{1, 2, 3, 4};
         int[] ingredientIndex = new int[]{5, 6, 7, 8};
         
