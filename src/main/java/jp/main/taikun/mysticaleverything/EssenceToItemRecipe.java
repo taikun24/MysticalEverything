@@ -27,7 +27,7 @@ public class EssenceToItemRecipe extends CustomRecipe {
 
             if (!stack.isEmpty()) {
                 if (stack.is(Mysticaleverything.EVERYTHING_ESSENCE.get())) {
-                    CropResource currentResource = TagItemHelper.getResource(stack);
+                    CropResource currentResource = TagItemHelper.getResource(stack, level.registryAccess());
                     if (currentResource == CropResource.EMPTY) {
                         return false;
                     }
@@ -62,7 +62,7 @@ public class EssenceToItemRecipe extends CustomRecipe {
 
         if (essenceStack.isEmpty()) return ItemStack.EMPTY;
 
-        CropResource crop = TagItemHelper.getResource(essenceStack);
+        CropResource crop = TagItemHelper.getResource(essenceStack, registryAccess);
         if (crop == CropResource.EMPTY || crop.getType() != CropResource.TYPE.ITEM) return ItemStack.EMPTY;
 
         return crop.getItem().copy();

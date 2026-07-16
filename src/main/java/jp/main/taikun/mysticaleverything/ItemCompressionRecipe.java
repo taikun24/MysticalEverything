@@ -56,7 +56,7 @@ public class ItemCompressionRecipe extends CustomRecipe {
             Mysticaleverything.LOGGER.info("hi");
         }
         ItemStack catalyst = new ItemStack(Mysticaleverything.COMPRESSION_CATALYST.get());
-        TagItemHelper.setResource(catalyst, first);
+        TagItemHelper.setResource(catalyst, first, access);
         return catalyst;
     }
 

@@ -72,6 +72,7 @@ public class EverythingCropBlock extends CropBlock implements EntityBlock {
     @Override
     @SuppressWarnings("deprecation")
     public @NotNull List<ItemStack> getDrops(@NotNull BlockState bs, LootParams.@NotNull Builder builder) {
+        HolderLookup.Provider registryAccess = builder.getLevel().registryAccess();
         BlockEntity blockEntity = builder.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
         EverythingCropBlockEntity myBE = null;
         if (blockEntity instanceof EverythingCropBlockEntity) {
@@ -95,16 +96,15 @@ public class EverythingCropBlock extends CropBlock implements EntityBlock {
             return Lists.newArrayList();
         }
         ItemStack cropStack = new ItemStack(Mysticaleverything.EVERYTHING_CROP_ITEM.get());
-        TagItemHelper.setResource(cropStack, resource);
+        TagItemHelper.setResource(cropStack, resource, registryAccess);
 
         if (bs.getValue(CropBlock.AGE) == 7) {
             ItemStack essenceStack = new ItemStack(Mysticaleverything.EVERYTHING_ESSENCE.get());
-            TagItemHelper.setResource(essenceStack, resource);
+            TagItemHelper.setResource(essenceStack, resource, registryAccess);
             return Lists.newArrayList(cropStack, essenceStack);
         }
         return Lists.newArrayList(cropStack);
     }
-
     @Override
     public void setPlacedBy(Level level, @NotNull BlockPos pos, @NotNull BlockState state, @Nullable LivingEntity p_49850_, @NotNull ItemStack stack) {
         if (!level.isClientSide) {
@@ -112,8 +112,10 @@ public class EverythingCropBlock extends CropBlock implements EntityBlock {
             if (blockEntity instanceof EverythingCropBlockEntity myTile) {
                 if (stack.has(DataComponents.CUSTOM_DATA) && stack.get(DataComponents.CUSTOM_DATA) != null) {
                     CompoundTag itemNbt = stack.get(DataComponents.CUSTOM_DATA).copyTag();
-                    myTile.loadAdditional(itemNbt, level.registryAccess());
+                    myTile.cropResource = TagItemHelper.tagToResourceDirect(itemNbt, level.registryAccess());
                     myTile.setChanged();
+
+                    level.sendBlockUpdated(pos, state, state, 3);
                 }
             }
         }

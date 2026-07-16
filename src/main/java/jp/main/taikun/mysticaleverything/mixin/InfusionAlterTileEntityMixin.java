@@ -41,11 +41,11 @@ public class InfusionAlterTileEntityMixin {
         if (inventory.isEmpty()) return null;
         Recipe<?> recipe = instance.checkAndGet((CraftingInput) inventory, level);
 
-        if (recipe == null && mysticaleverything$isPatternValid(inventory)) {
+        if (recipe == null && mysticaleverything$isPatternValid(inventory, level)) {
             NonNullList<Ingredient> stacks = NonNullList.create();
             Ingredient stack = (Ingredient.of(ModItems.PROSPERITY_SEED_BASE.get().getDefaultInstance()));
             ItemStack catalyst = inventory.getItem(5);
-            CropResource resource = TagItemHelper.getResource(catalyst);
+            CropResource resource = TagItemHelper.getResource(catalyst, level.registryAccess());
             if (resource == CropResource.EMPTY) return recipe;
             ItemStack ing = resource.getItem();
             for (int i = 0; i < 4; i++) {
@@ -56,9 +56,9 @@ public class InfusionAlterTileEntityMixin {
             outputItem.setCount(1);
             if (Config.DISABLE_NBT.get()) {
                 ing = new ItemStack(ing.getItem(), 1);
-                TagItemHelper.setResource(outputItem, ing);
+                TagItemHelper.setResource(outputItem, ing, level.registryAccess());
             } else {
-                TagItemHelper.setResource(outputItem, resource);
+                TagItemHelper.setResource(outputItem, resource, level.registryAccess());
             }
             return new InfusionRecipe(
                     stack,
@@ -74,7 +74,7 @@ public class InfusionAlterTileEntityMixin {
         return !ItemStack.isSameItemSameComponents(inventory.getItem(slot), itemStack);
     }
     @Unique
-    public boolean mysticaleverything$isPatternValid(RecipeInput inventory) {
+    public boolean mysticaleverything$isPatternValid(RecipeInput inventory, Level level) {
         if (mysticaleverything$doesntMatchItem(inventory, 0, ModItems.PROSPERITY_SEED_BASE.get().getDefaultInstance())) {
             return false;
         }
@@ -85,7 +85,7 @@ public class InfusionAlterTileEntityMixin {
         ItemStack firstCatalyst = inventory.getItem(ingredientIndex[0]);
         if (firstCatalyst.isEmpty()) return false;
         
-        CropResource firstResource = TagItemHelper.getResource(firstCatalyst);
+        CropResource firstResource = TagItemHelper.getResource(firstCatalyst, level.registryAccess());
         if (firstResource == CropResource.EMPTY) return false;
 
         for (int i = 0; i < 4; i++) {
@@ -96,7 +96,7 @@ public class InfusionAlterTileEntityMixin {
             if (!currentCatalyst.is(Mysticaleverything.COMPRESSION_CATALYST.get())) {
                 return false;
             }
-            CropResource currentResource = TagItemHelper.getResource(currentCatalyst);
+            CropResource currentResource = TagItemHelper.getResource(currentCatalyst, level.registryAccess());
             if (!firstResource.equals(currentResource)) {
                 return false;
             }

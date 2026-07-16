@@ -21,21 +21,48 @@ public class EverythingCropBlockEntity extends BlockEntity implements Nameable {
         super(Mysticaleverything.EVERYTHING_CROP_BLOCK_ENTITY.get(), p_155229_, p_155230_);
         cropResource = CropResource.EMPTY;
     }
-    CropResource cropResource = CropResource.EMPTY;
+    CropResource cropResource;
+
+    private static @Nullable CompoundTag getResourceTag(@NotNull CompoundTag tag) {
+        if (tag.contains("components")) {
+            CompoundTag componentsTag = tag.getCompound("components");
+            if (componentsTag.contains("custom_data")) {
+                CompoundTag customDataTag = componentsTag.getCompound("custom_data");
+                if (customDataTag.contains("resource")) {
+                    return customDataTag.getCompound("resource");
+                }
+            }
+        }
+        if (tag.contains("resource")) {
+            return tag.getCompound("resource");
+        }
+        return null;
+    }
+
+    private static void putResourceTag(@NotNull CompoundTag tag, @NotNull CompoundTag resourceTag) {
+        CompoundTag componentsTag = tag.contains("components") ? tag.getCompound("components") : new CompoundTag();
+        CompoundTag customDataTag = componentsTag.contains("custom_data") ? componentsTag.getCompound("custom_data") : new CompoundTag();
+        customDataTag.put("resource", resourceTag);
+        componentsTag.put("custom_data", customDataTag);
+        tag.put("components", componentsTag);
+        tag.remove("resource");
+    }
 
     @Override
     public void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider provider) {
-        super.loadAdditional(tag, provider);
-        this.cropResource = TagItemHelper.tagToResourceDirect(tag);
+        CompoundTag resourceTag = getResourceTag(tag);
+        this.cropResource = resourceTag == null ? CropResource.EMPTY : TagItemHelper.tagToResource(resourceTag, provider);
     }
-
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider provider) {
         if (this.cropResource != null && this.cropResource != CropResource.EMPTY) {
-            CompoundTag resourceTag = TagItemHelper.resourceToTag(this.cropResource);
-            tag.put("resource", resourceTag);
+            CompoundTag resourceTag = TagItemHelper.resourceToTag(this.cropResource, provider);
+            putResourceTag(tag, resourceTag);
+        } else {
+            tag.remove("resource");
         }
     }
+
 
     @Override
     public void saveToItem(@NotNull ItemStack stack,  HolderLookup.@NotNull Provider provider) {
@@ -46,7 +73,6 @@ public class EverythingCropBlockEntity extends BlockEntity implements Nameable {
     @Override
     public @NotNull CompoundTag getUpdateTag( HolderLookup.@NotNull Provider provider) {
         CompoundTag tag = new CompoundTag();
-        // saveAdditional と同じ内容を書き込む
         this.saveAdditional(tag, provider);
         return tag;
     }
@@ -59,10 +85,9 @@ public class EverythingCropBlockEntity extends BlockEntity implements Nameable {
     @Override
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
         CompoundTag tag = pkt.getTag();
-        this.loadAdditional(tag, lookupProvider);
+        CompoundTag resourceTag = getResourceTag(tag);
+        this.cropResource = resourceTag == null ? CropResource.EMPTY : TagItemHelper.tagToResource(resourceTag, lookupProvider);
     }
-
-
     @Override
     public @NotNull Component getName() {
         return Component.translatable("block.mysticalagriculture.mystical_crop", cropResource.getName());
