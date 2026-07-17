@@ -28,6 +28,9 @@ repositories {
         name = "BlameJared Maven"
         url = "https://maven.blamejared.com/"
     }
+    maven {
+        url 'https://maven.blamejared.com'
+    }
 }
 
 runs {
@@ -74,6 +77,16 @@ dependencies {
     compileOnly "mezz.jei:jei-1.21.1-common-api:19.36.0.360"
     compileOnly "mezz.jei:jei-1.21.1-neoforge-api:19.36.0.360"
     localRuntime "mezz.jei:jei-1.21.1-neoforge:19.36.0.360"
+    compileOnly "curse.maven:botany-pots-353928:8243851"
+    compileOnly "curse.maven:bookshelf-228525:7606240"
+
+    runtimeOnly "curse.maven:industrial-foregoing-266515:8370717"
+    runtimeOnly "curse.maven:titanium-287342:7951516"
+    runtimeOnly "curse.maven:botany-pots-353928:8243851"
+    runtimeOnly "curse.maven:mekanism-268560:7904058"
+    runtimeOnly "curse.maven:prickle-1023259:6961457"
+    runtimeOnly "curse.maven:bookshelf-228525:7606240"
+    runtimeOnly "curse.maven:botany-pots-mystical-agriculture-compat-1329409:8177218"
 }
 
 tasks.withType(ProcessResources).configureEach {

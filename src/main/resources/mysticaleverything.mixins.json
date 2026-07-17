@@ -5,8 +5,10 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "mysticaleverything.refmap.json",
   "mixins": [
-    "InfusionAlterTileEntityMixin"
+    "main.InfusionAlterTileEntityMixin",
+    "botanypots.CropOverrideMixin"
   ],
+  "plugin": "jp.main.taikun.mysticaleverything.mixin.MysticalEverythingMixinPlugin",
   "client": [
   ],
   "injectors": {
