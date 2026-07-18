@@ -177,7 +177,11 @@ dependencies {
     compileOnly fg.deobf("mezz.jei:jei-1.20.1-common-api:15.20.0.129")
     compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge-api:15.20.0.129")
     runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:15.20.0.129")
+    runtimeOnly fg.deobf("curse.maven:bookshelf-228525:5423987")
+    compileOnly fg.deobf("curse.maven:bookshelf-228525:5423987")
 
+    compileOnly fg.deobf("curse.maven:botany-pots-353928:7612402")
+    runtimeOnly fg.deobf("curse.maven:botany-pots-353928:7612402")
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

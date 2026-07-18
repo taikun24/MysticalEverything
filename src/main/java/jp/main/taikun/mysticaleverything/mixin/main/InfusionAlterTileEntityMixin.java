@@ -1,4 +1,4 @@
-package jp.main.taikun.mysticaleverything.mixin;
+package jp.main.taikun.mysticaleverything.mixin.main;
 
 import com.blakebr0.cucumber.inventory.BaseItemStackHandler;
 import com.blakebr0.cucumber.inventory.CachedRecipe;
@@ -10,7 +10,6 @@ import jp.main.taikun.mysticaleverything.CropResource;
 import jp.main.taikun.mysticaleverything.Mysticaleverything;
 import jp.main.taikun.mysticaleverything.TagItemHelper;
 import net.minecraft.core.NonNullList;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;

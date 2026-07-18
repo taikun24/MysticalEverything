@@ -8,11 +8,17 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
 
-public class EverythingCropItem extends ItemNameBlockItem implements IClientItemExtensions {
+public class EverythingCropItem extends ItemNameBlockItem {
     public EverythingCropItem() {
         super(Mysticaleverything.EVERYTHING_CROP.get(), new Item.Properties().rarity(Rarity.EPIC));
     }
 
+
+    @Override
+    public @NotNull Component getName(@NotNull ItemStack stack) {
+        CropResource resource = TagItemHelper.getResource(stack);
+        return Component.translatable("item.mysticalagriculture.mystical_seeds", resource.getName());
+    }
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
@@ -26,11 +32,5 @@ public class EverythingCropItem extends ItemNameBlockItem implements IClientItem
                 return renderer;
             }
         });
-    }
-
-    @Override
-    public @NotNull Component getName(@NotNull ItemStack stack) {
-        CropResource resource = TagItemHelper.getResource(stack);
-        return Component.translatable("item.mysticalagriculture.mystical_seeds", resource.getName());
     }
 }
