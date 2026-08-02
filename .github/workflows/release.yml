@@ -1,0 +1,221 @@
+name: release
+
+# CurseForge へのアップロードと GitHub Release の作成。
+#
+# このファイルは main にだけ置いてあります。workflow_dispatch は既定ブランチの
+# ワークフローしか実行できないため、neoforge ブランチに置いても実行できません。
+# ビルド対象は下の checkout が inputs.target のブランチを取りに行きます。
+#
+# 1 回の実行で 1 ブランチだけを扱います。マトリクスで両方流すと、片方だけ失敗して
+# 再実行したときに成功済みの側を二重アップロードしてしまうため
+# (CurseForge のアップロード API に冪等性がありません)。
+#
+# 必要なシークレット:
+#   CF_API_TOKEN — https://legacy.curseforge.com/account/api-tokens で発行したもの。
+#                  console.curseforge.com の Core API キーではアップロードできません。
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '対象ブランチ'
+        type: choice
+        options:
+          - 'main (Forge 1.20.1)'
+          - 'neoforge (NeoForge 1.21.1)'
+        default: 'main (Forge 1.20.1)'
+      release_type:
+        description: 'CurseForge のリリース種別'
+        type: choice
+        options: [release, beta, alpha]
+        default: release
+      dry_run:
+        description: 'アップロードせずビルドと検証だけ行う'
+        type: boolean
+        default: false
+
+env:
+  CF_PROJECT_ID: '1596717'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+
+    steps:
+      - name: 対象ブランチの設定を決める
+        id: t
+        run: |
+          case "${{ inputs.target }}" in
+            'main (Forge 1.20.1)')
+              branch=main;     java=17; mc=1.20.1; loader=Forge;    tag_prefix=forge;    label=Forge ;;
+            'neoforge (NeoForge 1.21.1)')
+              branch=neoforge; java=21; mc=1.21.1; loader=NeoForge; tag_prefix=neoforge; label=NeoForge ;;
+            *)
+              echo "::error::対象ブランチの指定が不正です: ${{ inputs.target }}"
+              exit 1 ;;
+          esac
+          {
+            echo "branch=$branch"
+            echo "java=$java"
+            echo "mc=$mc"
+            echo "loader=$loader"
+            echo "tag_prefix=$tag_prefix"
+            echo "label=$label"
+          } >> "$GITHUB_OUTPUT"
+          echo "$branch を $loader $mc / Java $java でリリースします"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.t.outputs.branch }}
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.t.outputs.java }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: バージョンと changelog を取り出す
+        id: meta
+        run: |
+          version=$(grep -E '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '\r')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # CHANGELOG.md の「先頭のバージョン節」だけを抜き出す。
+          # 見出しが mod_version と食い違っていたら、書き忘れとみなして止める。
+          if [ ! -f CHANGELOG.md ]; then
+            echo "::error::CHANGELOG.md がありません (ブランチ ${{ steps.t.outputs.branch }})"
+            exit 1
+          fi
+          head=$(grep -m1 -E '^## ' CHANGELOG.md | sed -E 's/^## +//' | tr -d '\r')
+          if [ "$head" != "$version" ]; then
+            echo "::error::CHANGELOG.md の先頭が '$head' ですが mod_version は '$version' です"
+            exit 1
+          fi
+          awk '/^## /{ if (seen) exit; seen=1; next } seen' CHANGELOG.md > changelog.md
+          echo "--- changelog ---"
+          cat changelog.md
+
+      - run: chmod +x ./gradlew
+
+      - name: Build
+        run: ./gradlew build
+
+      - name: jar を特定する
+        id: jar
+        run: |
+          # sources / javadoc が混ざらないよう名前で絞る (build.gradle の archivesName と揃えること)。
+          jar="build/libs/mysticaleverything-${{ steps.meta.outputs.version }}.jar"
+          test -f "$jar" || { echo "::error::$jar が見つかりません"; ls -la build/libs; exit 1; }
+          echo "path=$jar" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$jar")" >> "$GITHUB_OUTPUT"
+          ls -la "$jar"
+
+      # ゲームバージョンの数値 ID は API から引く。ハードコードすると
+      # CurseForge 側の採番が変わったときに黙って壊れるため。
+      # このステップが通れば「トークンが有効」であることも同時に分かる。
+      - name: CurseForge のゲームバージョン ID を解決する
+        if: ${{ !inputs.dry_run }}
+        id: gv
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          if [ -z "$CF_API_TOKEN" ]; then
+            echo "::error::シークレット CF_API_TOKEN が設定されていません"
+            exit 1
+          fi
+          curl -sS -f -H "X-Api-Token: $CF_API_TOKEN" \
+            https://minecraft.curseforge.com/api/game/versions > versions.json
+
+          # 関数の中で exit してはいけない。$(...) はサブシェルなので、
+          # そこで exit しても抜けるのはサブシェルだけでステップは成功扱いのまま進む。
+          # 空かどうかは呼び出した側で見る。
+          pick() { jq -r --arg n "$1" '[.[] | select(.name == $n)][0].id // empty' versions.json; }
+          need() {
+            if [ -z "$2" ]; then
+              echo "::error::CurseForge に '$1' というゲームバージョンが見つかりません"
+              exit 1
+            fi
+          }
+          mc=$(pick '${{ steps.t.outputs.mc }}');          need '${{ steps.t.outputs.mc }}' "$mc"
+          loader=$(pick '${{ steps.t.outputs.loader }}');  need '${{ steps.t.outputs.loader }}' "$loader"
+          java=$(pick 'Java ${{ steps.t.outputs.java }}'); need 'Java ${{ steps.t.outputs.java }}' "$java"
+
+          # Environment グループ (Client / Server) も必須。抜けていると errorCode 1021
+          # "You must select at least one version from the environment group of versions" で 400 になる。
+          # この Mod は描画もサーバ側のロジックも持つので両方を指定する。
+          client=$(pick 'Client');                         need 'Client' "$client"
+          server=$(pick 'Server');                         need 'Server' "$server"
+
+          echo "ids=[$mc,$loader,$java,$client,$server]" >> "$GITHUB_OUTPUT"
+          echo "MC=${{ steps.t.outputs.mc }}($mc) ローダー=${{ steps.t.outputs.loader }}($loader) Java=${{ steps.t.outputs.java }}($java) Client($client) Server($server)"
+
+      - name: CurseForge にアップロード
+        if: ${{ !inputs.dry_run }}
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          # relations (依存 Mod) は slug を 1 つ間違えるとアップロードごと失敗するので
+          # metadata には入れず、ファイルページで手動設定する。
+          jq -n \
+            --rawfile changelog changelog.md \
+            --arg name "MysticalEverything ${{ steps.meta.outputs.version }} (${{ steps.t.outputs.mc }})" \
+            --arg type "${{ inputs.release_type }}" \
+            --argjson versions '${{ steps.gv.outputs.ids }}' \
+            '{
+               changelog:     $changelog,
+               changelogType: "markdown",
+               displayName:   $name,
+               gameVersions:  $versions,
+               releaseType:   $type
+             }' > metadata.json
+          cat metadata.json
+
+          # -f は使わない。curl の -f は失敗時に本文を捨ててしまうので、
+          # CurseForge が返す errorCode / errorMessage が読めず原因が分からなくなる。
+          # ステータスコードは -w で受け取り、本文は必ず表示する。
+          http=$(curl -sS -o response.txt -w '%{http_code}' -X POST \
+            -H "X-Api-Token: $CF_API_TOKEN" \
+            -F "metadata=<metadata.json" \
+            -F "file=@${{ steps.jar.outputs.path }}" \
+            "https://minecraft.curseforge.com/api/projects/${{ env.CF_PROJECT_ID }}/upload-file")
+
+          echo "HTTP $http"
+          echo "--- response ---"
+          cat response.txt || true
+          echo
+
+          if [ "$http" != "200" ]; then
+            echo "::error::アップロードに失敗しました (HTTP $http)"
+            exit 1
+          fi
+          echo "アップロードしました: ${{ steps.jar.outputs.name }}"
+
+      - name: GitHub Release を作る
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.t.outputs.tag_prefix }}-v${{ steps.meta.outputs.version }}"
+          # 同じタグで再実行したときに黙って上書きしないよう、あったら止める。
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::error::タグ $tag の Release が既にあります"
+            exit 1
+          fi
+          gh release create "$tag" \
+            --title "${{ steps.t.outputs.label }} ${{ steps.meta.outputs.version }}" \
+            --notes-file changelog.md \
+            --target "${{ steps.t.outputs.branch }}" \
+            "${{ steps.jar.outputs.path }}"
+
+      - name: 成果物を残す
+        uses: actions/upload-artifact@v4
+        with:
+          name: mysticaleverything-${{ steps.t.outputs.mc }}-${{ steps.meta.outputs.version }}
+          path: build/libs/*.jar
+          if-no-files-found: error
