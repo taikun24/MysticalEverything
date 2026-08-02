@@ -10,18 +10,22 @@ public class CropResource {
         ITEM, FLUID
     }
 
+    /** 中身が無いことを表す番兵。同一性 ({@code == EMPTY}) で判定してよい。 */
     public static final CropResource EMPTY = new CropResource(ItemStack.EMPTY);
+
     private final TYPE type;
-    private ItemStack item;
-    private Fluid fluid;
+    private final ItemStack item;
+    private final Fluid fluid;
 
     public CropResource(ItemStack item) {
         this.type = TYPE.ITEM;
         this.item = item == null ? ItemStack.EMPTY : item;
+        this.fluid = null;
     }
 
     public CropResource(Fluid fluid) {
         this.type = TYPE.FLUID;
+        this.item = ItemStack.EMPTY;
         this.fluid = fluid;
     }
 

@@ -1,0 +1,31 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:and",
+          "values": [
+            { "type": "forge:mod_loaded", "modid": "botanypots" },
+            { "type": "forge:mod_loaded", "modid": "astral_mekanism" }
+          ]
+        }
+      ],
+      "recipe": {
+        "type": "botanypots:crop",
+        "seed": { "item": "mysticaleverything:everything_crop" },
+        "categories": ["dirt"],
+        "growthTicks": 100,
+        "display": { "type": "botanypots:aging", "block": "mysticaleverything:everything_crop" },
+        "drops": [
+          {
+            "chance": 1.0,
+            "output": { "item": "mysticaleverything:everything_essence" },
+            "minRolls": 1,
+            "maxRolls": 1
+          }
+        ]
+      }
+    }
+  ]
+}

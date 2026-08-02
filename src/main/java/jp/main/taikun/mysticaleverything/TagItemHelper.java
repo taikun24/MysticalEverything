@@ -7,74 +7,73 @@ import net.minecraftforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class TagItemHelper {
-    public static CompoundTag itemToTag(@Nullable ItemStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putString("type", "item");
-            compoundTag.put("Item", new CompoundTag());
-            return compoundTag;
-        }
-        ItemStack copy = stack.copy();
-        if (copy.getCount() != 1) {
-            copy.setCount(1);
-        }
-        CompoundTag itemTag = new CompoundTag();
-        copy.save(itemTag);
-        CompoundTag compoundTag = new CompoundTag();
-        compoundTag.put("Item", itemTag);
-        compoundTag.putString("type", "item");
-        return compoundTag;
+/**
+ * {@link CropResource} と NBT の相互変換。
+ * <p>
+ * キー名は既存ワールドのアイテムに書き込まれているので変更しないこと。
+ */
+public final class TagItemHelper {
+
+    /** アイテム側のルートタグに置く、resource 本体のキー。 */
+    public static final String KEY_RESOURCE = "resource";
+    private static final String KEY_TYPE = "type";
+    private static final String KEY_ITEM = "Item";
+    private static final String KEY_FLUID = "Fluid";
+    private static final String TYPE_ITEM = "item";
+    private static final String TYPE_FLUID = "fluid";
+
+    private TagItemHelper() {
     }
 
-    public static CompoundTag fluidToTag(@Nullable Fluid fluid) {
-        if (fluid == null) {
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putString("type", "fluid");
-            compoundTag.put("Fluid", new CompoundTag());
-            return compoundTag;
+    @NotNull
+    public static CompoundTag itemToTag(@Nullable ItemStack stack) {
+        CompoundTag itemTag = new CompoundTag();
+        if (stack != null && !stack.isEmpty()) {
+            stack.copyWithCount(1).save(itemTag);
         }
-        FluidStack fluidStack = new FluidStack(fluid, 1);
+        return wrap(TYPE_ITEM, KEY_ITEM, itemTag);
+    }
+
+    @NotNull
+    public static CompoundTag fluidToTag(@Nullable Fluid fluid) {
         CompoundTag fluidTag = new CompoundTag();
-        fluidStack.writeToNBT(fluidTag);
+        if (fluid != null) {
+            new FluidStack(fluid, 1).writeToNBT(fluidTag);
+        }
+        return wrap(TYPE_FLUID, KEY_FLUID, fluidTag);
+    }
+
+    private static CompoundTag wrap(String type, String payloadKey, CompoundTag payload) {
         CompoundTag compoundTag = new CompoundTag();
-        compoundTag.put("Fluid", fluidTag);
-        compoundTag.putString("type", "fluid");
+        compoundTag.putString(KEY_TYPE, type);
+        compoundTag.put(payloadKey, payload);
         return compoundTag;
     }
 
     @NotNull
     public static CropResource tagToResource(@Nullable CompoundTag compoundTag) {
-        if (compoundTag == null || compoundTag.isEmpty()) {
+        if (compoundTag == null || !compoundTag.contains(KEY_TYPE)) {
             return CropResource.EMPTY;
         }
-        if (!compoundTag.contains("type")) {
-            return CropResource.EMPTY;
-        }
-        String type = compoundTag.getString("type");
         try {
-            switch (type) {
-                case "item" -> {
-                    if (compoundTag.contains("Item")) {
-                        ItemStack itemStack = ItemStack.of(compoundTag.getCompound("Item"));
-                        if (itemStack.isEmpty()) {
-                            return CropResource.EMPTY;
+            switch (compoundTag.getString(KEY_TYPE)) {
+                case TYPE_ITEM -> {
+                    if (compoundTag.contains(KEY_ITEM)) {
+                        ItemStack itemStack = ItemStack.of(compoundTag.getCompound(KEY_ITEM));
+                        if (!itemStack.isEmpty()) {
+                            return new CropResource(itemStack);
                         }
-                        return new CropResource(itemStack);
                     }
                 }
-                case "fluid" -> {
-                    if (compoundTag.contains("Fluid")) {
-                        FluidStack fluidStack = FluidStack.loadFluidStackFromNBT(compoundTag.getCompound("Fluid"));
-                        if (fluidStack == null || fluidStack.isEmpty()) {
-                            return CropResource.EMPTY;
+                case TYPE_FLUID -> {
+                    if (compoundTag.contains(KEY_FLUID)) {
+                        FluidStack fluidStack = FluidStack.loadFluidStackFromNBT(compoundTag.getCompound(KEY_FLUID));
+                        if (fluidStack != null && !fluidStack.isEmpty() && fluidStack.getFluid() != null) {
+                            return new CropResource(fluidStack.getFluid());
                         }
-                        Fluid fluidType = fluidStack.getFluid();
-                        if (fluidType == null) {
-                            return CropResource.EMPTY;
-                        }
-                        return new CropResource(fluidType);
                     }
+                }
+                default -> {
                 }
             }
         } catch (Exception e) {
@@ -83,12 +82,13 @@ public class TagItemHelper {
         return CropResource.EMPTY;
     }
 
+    /** アイテムのルートタグ (= {@code "resource"} を含む側) から読む。 */
     @NotNull
     public static CropResource tagToResourceDirect(@Nullable CompoundTag compoundTag) {
-        if (compoundTag == null || !compoundTag.contains("resource")) {
+        if (compoundTag == null || !compoundTag.contains(KEY_RESOURCE)) {
             return CropResource.EMPTY;
         }
-        return tagToResource(compoundTag.getCompound("resource"));
+        return tagToResource(compoundTag.getCompound(KEY_RESOURCE));
     }
 
     @NotNull
@@ -122,34 +122,23 @@ public class TagItemHelper {
         if (resource == null || resource == CropResource.EMPTY) {
             CompoundTag tag = stack.getTag();
             if (tag != null) {
-                tag.remove("resource");
+                tag.remove(KEY_RESOURCE);
                 if (tag.isEmpty()) {
                     stack.setTag(null);
                 }
             }
         } else {
-            CompoundTag tag = stack.getOrCreateTag();
-            tag.put("resource", resourceToTag(resource));
+            stack.getOrCreateTag().put(KEY_RESOURCE, resourceToTag(resource));
         }
     }
 
     public static void setResource(@NotNull ItemStack stack, @Nullable ItemStack itemResource) {
-        if (itemResource == null || itemResource.isEmpty()) {
-            setResource(stack, CropResource.EMPTY);
-        } else {
-            setResource(stack, new CropResource(itemResource));
-        }
+        setResource(stack, itemResource == null || itemResource.isEmpty()
+                ? CropResource.EMPTY
+                : new CropResource(itemResource));
     }
 
     public static boolean hasResource(@Nullable ItemStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return false;
-        }
-        CompoundTag tag = stack.getTag();
-        if (tag == null || !tag.contains("resource")) {
-            return false;
-        }
-        CropResource resource = getResource(stack);
-        return resource != CropResource.EMPTY;
+        return getResource(stack) != CropResource.EMPTY;
     }
 }

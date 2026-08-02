@@ -8,56 +8,81 @@ import net.darkhax.botanypots.data.displaystate.AgingDisplayState;
 import net.darkhax.botanypots.data.recipes.crop.BasicCrop;
 import net.darkhax.botanypots.data.recipes.crop.HarvestEntry;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
+/**
+ * everything_crop を Botany Pots に植えたときのレシピ。
+ * <p>
+ * 何が採れるかは種の NBT で決まるためデータパックのレシピとしては登録できない。
+ * {@link jp.main.taikun.mysticaleverything.mixin.botanypots.CropOverrideMixin} が
+ * 種を見るたびにこのインスタンスを作って返す。
+ */
 public class MEBotanyPotsCrop extends BasicCrop {
+
+    /** everything_crop が受け付ける土のカテゴリ。 */
+    public static final Set<String> SOIL_CATEGORIES = Set.of("dirt");
+    public static final int GROWTH_TICKS = 100;
+    private static final int LIGHT_LEVEL = 0;
 
     private final CropResource resource;
 
-    public MEBotanyPotsCrop(ResourceLocation id, ItemStack stack) {
-        super(
-                id,
-                Ingredient.of(stack.getItem()), // 種の粗いフィルタ。厳密判定はmatchesLookupで行う
-                Set.of("dirt"), // TODO: 旧SoilクラスがgetCategories()で返す文字列と一致するか要確認
-                100, // growTime
-                buildResults(stack),
-                List.of(
-                        // TODO: 旧AgingDisplayStateのコンストラクタ引数が新APIと異なる可能性あり要確認
-                        new AgingDisplayState(Mysticaleverything.EVERYTHING_CROP.get().defaultBlockState())
-                ),
-                0 // lightLevel
-        );
-        this.resource = TagItemHelper.getResource(stack);
+    public MEBotanyPotsCrop(ItemStack seedStack) {
+        this(TagItemHelper.getResource(seedStack));
     }
 
-    private static List<HarvestEntry> buildResults(ItemStack stack) {
-        final CropResource resource = TagItemHelper.getResource(stack);
+    private MEBotanyPotsCrop(CropResource resource) {
+        super(
+                idFor(resource),
+                // 種の粗いフィルタ。NBT を含む厳密な判定は matchesLookup で行う
+                Ingredient.of(Mysticaleverything.EVERYTHING_CROP_ITEM.get()),
+                SOIL_CATEGORIES,
+                GROWTH_TICKS,
+                List.of(new HarvestEntry(1.0F, essenceOf(resource), 1, 1)),
+                List.of(new AgingDisplayState(Mysticaleverything.EVERYTHING_CROP.get().defaultBlockState())),
+                LIGHT_LEVEL
+        );
+        this.resource = resource;
+    }
 
-        final ItemStack resultStack = new ItemStack(Mysticaleverything.EVERYTHING_ESSENCE.get(), 1);
-        CompoundTag tag = new CompoundTag();
-        tag.put("resource", TagItemHelper.resourceToTag(resource));
-        resultStack.setTag(tag);
+    private static final ResourceLocation EMPTY_ID =
+            Objects.requireNonNull(ResourceLocation.tryBuild(Mysticaleverything.MODID, "crop_empty"));
 
-        // TODO: HarvestEntryのコンストラクタ引数(chance, minRolls, maxRolls)の並びは要確認
-        return List.of(new HarvestEntry(1.0F, resultStack, 1, 1));
+    /** 中身のアイテムから一意な id を作る。id は表示用で、ポットには永続化されない。 */
+    private static ResourceLocation idFor(CropResource resource) {
+        if (resource != CropResource.EMPTY && resource.getType() == CropResource.TYPE.ITEM) {
+            ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(resource.getItem().getItem());
+            if (itemId != null) {
+                ResourceLocation cropId = ResourceLocation.tryBuild(Mysticaleverything.MODID,
+                        "crop_" + itemId.getNamespace() + "_" + itemId.getPath());
+                if (cropId != null) {
+                    return cropId;
+                }
+            }
+        }
+        return EMPTY_ID;
+    }
+
+    private static ItemStack essenceOf(CropResource resource) {
+        ItemStack essence = new ItemStack(Mysticaleverything.EVERYTHING_ESSENCE.get());
+        TagItemHelper.setResource(essence, resource);
+        return essence;
     }
 
     /**
-     * BasicCrop#matchesLookup はデフォルトで seed.test(placedStack) しか見ないため、
-     * NBTで区別される resource の同一性を明示的にチェックするようoverride。
+     * {@link BasicCrop#matchesLookup} は seed の Ingredient しか見ないため、
+     * NBT で区別される resource の同一性を明示的に確認する。
      */
     @Override
     public boolean matchesLookup(Level level, BlockPos pos, BlockEntityBotanyPot pot, ItemStack placedStack) {
-        final CropResource other = TagItemHelper.getResource(placedStack);
-        return this.resource.equals(other) && super.matchesLookup(level, pos, pot, placedStack);
+        return this.resource.equals(TagItemHelper.getResource(placedStack))
+                && super.matchesLookup(level, pos, pot, placedStack);
     }
-
-    // couldMatch / isCacheKey は旧API(CacheableRecipeの概念なし)には存在しないため削除
 }

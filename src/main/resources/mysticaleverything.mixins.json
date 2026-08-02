@@ -2,9 +2,10 @@
   "required": true,
   "minVersion": "0.8",
   "package": "jp.main.taikun.mysticaleverything.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_17",
   "refmap": "mysticaleverything.refmap.json",
   "mixins": [
+    "astralmekanism.GreenhouseHarvestMixin",
     "botanypots.CropOverrideMixin",
     "main.InfusionAlterTileEntityMixin"
   ],

@@ -2,7 +2,6 @@ package jp.main.taikun.mysticaleverything;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -17,6 +16,8 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
+
+import java.util.Objects;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(Mysticaleverything.MODID)
@@ -62,10 +63,8 @@ public class Mysticaleverything {
         CREATIVE_MODE_TABS.register(bus);
     }
 
-    public static boolean isNotSameItem(ItemStack itemStack, ItemStack target) {
-        CompoundTag targetTag = target.getTag();
-        boolean isSameItem = target.is(itemStack.getItem());
-        boolean isSameTag = targetTag==null?itemStack.getTag()==null:targetTag.equals(itemStack.getTag());
-        return (!isSameItem || !isSameTag);
+    /** アイテムと NBT の両方が一致するか。 */
+    public static boolean isSameItem(ItemStack a, ItemStack b) {
+        return b.is(a.getItem()) && Objects.equals(a.getTag(), b.getTag());
     }
 }

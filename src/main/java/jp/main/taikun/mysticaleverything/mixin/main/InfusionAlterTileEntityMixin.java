@@ -65,12 +65,12 @@ public class InfusionAlterTileEntityMixin {
         return recipe;
     }
     @Unique
-    public boolean mysticaleverything$doesntMatchItem(BaseItemStackHandler inventory, int slot, ItemStack itemStack){
-        return Mysticaleverything.isNotSameItem(inventory.getStackInSlot(slot), itemStack);
+    public boolean mysticaleverything$matchesItem(BaseItemStackHandler inventory, int slot, ItemStack itemStack){
+        return Mysticaleverything.isSameItem(inventory.getStackInSlot(slot), itemStack);
     }
     @Unique
     public boolean mysticaleverything$isPatternValid(BaseItemStackHandler inventory) {
-        if (mysticaleverything$doesntMatchItem(inventory, 0, ModItems.PROSPERITY_SEED_BASE.get().getDefaultInstance())) {
+        if (!mysticaleverything$matchesItem(inventory, 0, ModItems.PROSPERITY_SEED_BASE.get().getDefaultInstance())) {
             return false;
         }
         int[] essenceIndex = new int[]{1, 2, 3, 4};
