@@ -81,6 +81,7 @@ public class InfusionAlterTileEntityMixin {
         
         CropResource firstResource = TagItemHelper.getResource(firstCatalyst);
         if (firstResource == CropResource.EMPTY) return false;
+        if (!Config.filter(firstResource.getItem())) return false;
 
         for (int i = 0; i < 4; i++) {
             if (!inventory.getStackInSlot(essenceIndex[i]).is(REQUIRED_ESSENCE.getItem())) {
