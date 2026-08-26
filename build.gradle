@@ -24,6 +24,10 @@ sourceSets.main.resources {
 
 repositories {
     maven { url "https://cursemaven.com" }
+    maven { // Mekanism (Mekanism:More Machine 対応の mixin をコンパイルするため)
+        name = "ModMaven"
+        url = "https://modmaven.dev"
+    }
     maven {
         name = "BlameJared Maven"
         url = "https://maven.blamejared.com/"
@@ -78,6 +82,8 @@ dependencies {
     compileOnly "mezz.jei:jei-1.21.1-neoforge-api:19.36.0.360"
     localRuntime "mezz.jei:jei-1.21.1-neoforge:19.36.0.360"
     compileOnly "curse.maven:botany-pots-353928:8243851"
+    // Planting Station 用 mixin が Mekanism API の型 (ChemicalStack) を要る。実行時には不要
+    compileOnly "mekanism:Mekanism:1.21.1-10.7.19.85"
     compileOnly "curse.maven:bookshelf-228525:7606240"
 
     runtimeOnly "curse.maven:industrial-foregoing-266515:8370717"

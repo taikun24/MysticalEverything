@@ -2,11 +2,13 @@
   "required": true,
   "minVersion": "0.8",
   "package": "jp.main.taikun.mysticaleverything.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_21",
   "refmap": "mysticaleverything.refmap.json",
   "mixins": [
     "main.InfusionAlterTileEntityMixin",
-    "botanypots.CropOverrideMixin"
+    "botanypots.CropOverrideMixin",
+    "mekmm.PlantingRecipeOutputMixin",
+    "mekmm.PlantingChanceOutputMixin"
   ],
   "plugin": "jp.main.taikun.mysticaleverything.mixin.MysticalEverythingMixinPlugin",
   "client": [

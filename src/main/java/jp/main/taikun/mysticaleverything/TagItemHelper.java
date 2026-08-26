@@ -4,15 +4,29 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TagItemHelper {
+    /**
+     * provider を渡してもらえない呼び出し元 (他 Mod の機械の内部処理など) 向けのフォールバック。
+     * 専用サーバーでは Minecraft クラスに触れないので、まず動いているサーバーを見る。
+     */
     private static @Nullable HolderLookup.Provider getClientRegistryAccess() {
+        try {
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            if (server != null) {
+                return server.registryAccess();
+            }
+        } catch (Throwable ignored) {
+            // Not running a server (integrated or dedicated) right now.
+        }
         try {
             if (Minecraft.getInstance().level != null) {
                 return Minecraft.getInstance().level.registryAccess();

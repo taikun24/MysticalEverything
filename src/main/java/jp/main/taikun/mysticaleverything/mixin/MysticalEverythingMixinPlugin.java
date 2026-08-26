@@ -13,7 +13,9 @@ import java.util.logging.Logger;
 
 public class MysticalEverythingMixinPlugin implements IMixinConfigPlugin {
     private static final Map<String, String> mixinPackageMap = Map.of(
-            "jp.main.taikun.mysticaleverything.mixin.botanypots", "botanypots"
+            "jp.main.taikun.mysticaleverything.mixin.botanypots", "botanypots",
+            // Planting Station / Planting Factory は Mekanism:More Machine の機械
+            "jp.main.taikun.mysticaleverything.mixin.mekmm", "mekmm"
     );
     private static final Logger logger = Logger.getLogger(MysticalEverythingMixinPlugin.class.getName());
     @Override

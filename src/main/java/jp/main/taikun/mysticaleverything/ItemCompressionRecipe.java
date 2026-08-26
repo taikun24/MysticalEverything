@@ -29,10 +29,12 @@ public class ItemCompressionRecipe extends CustomRecipe {
         if (catalyst.is(Mysticaleverything.COMPRESSION_CATALYST.get())) {
             if (TagItemHelper.hasResource(catalyst)) return false;
             ItemStack first = container.getItem(0);
+            if (!Config.filter(first)) return false;
+            boolean ignoreNBT = Config.disableNBT(first);
             for (int i = 1; i < 9; i++){
                 if (i == 4) continue;
                 ItemStack current = container.getItem(i);
-                if (Config.DISABLE_NBT.get()){
+                if (ignoreNBT){
                     if (!current.is(first.getItem())) {
                         return false;
                     }
@@ -50,7 +52,7 @@ public class ItemCompressionRecipe extends CustomRecipe {
     @Override
     public @NotNull ItemStack assemble(CraftingInput container, @NotNull HolderLookup.Provider access) {
         ItemStack first = container.getItem(0);
-        if (Config.DISABLE_NBT.get()) {
+        if (Config.disableNBT(first)) {
             first = first.copy();
             first.set(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
             Mysticaleverything.LOGGER.info("hi");

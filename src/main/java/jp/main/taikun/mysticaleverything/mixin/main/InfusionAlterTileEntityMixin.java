@@ -51,7 +51,7 @@ public class InfusionAlterTileEntityMixin {
             }
             ItemStack outputItem = Mysticaleverything.EVERYTHING_CROP.get().asItem().getDefaultInstance();
             outputItem.setCount(1);
-            if (Config.DISABLE_NBT.get()) {
+            if (Config.disableNBT(ing)) {
                 ing = new ItemStack(ing.getItem(), 1);
                 TagItemHelper.setResource(outputItem, ing, level.registryAccess());
             } else {
@@ -84,6 +84,7 @@ public class InfusionAlterTileEntityMixin {
         
         CropResource firstResource = TagItemHelper.getResource(firstCatalyst, level.registryAccess());
         if (firstResource == CropResource.EMPTY) return false;
+        if (!Config.filter(firstResource.getItem())) return false;
 
         for (int i = 0; i < 4; i++) {
             if (!inventory.getItem(essenceIndex[i]).is(REQUIRED_ESSENCE.getItem())) {
