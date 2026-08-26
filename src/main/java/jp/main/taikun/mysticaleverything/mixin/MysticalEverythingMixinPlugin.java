@@ -20,7 +20,9 @@ public class MysticalEverythingMixinPlugin implements IMixinConfigPlugin {
     private static final Map<String, List<String>> OPTIONAL_MIXIN_PACKAGES = Map.of(
             "jp.main.taikun.mysticaleverything.mixin.botanypots", List.of("botanypots"),
             // グリーンハウスは astral_mekanism の機械だが、レシピの器は botanypots のもの
-            "jp.main.taikun.mysticaleverything.mixin.astralmekanism", List.of("botanypots", "astral_mekanism")
+            "jp.main.taikun.mysticaleverything.mixin.astralmekanism", List.of("botanypots", "astral_mekanism"),
+            // Planting Station / Planting Factory は Mekanism:More Machine の機械
+            "jp.main.taikun.mysticaleverything.mixin.mekmm", List.of("mekmm")
     );
 
     private static final Logger LOGGER = LogManager.getLogger("mysticaleverything");

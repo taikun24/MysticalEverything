@@ -146,6 +146,10 @@ repositories {
         name = "BlameJared Maven"
         url = "https://maven.blamejared.com/"
     }
+    maven { // Mekanism (Mekanism:More Machine 対応の mixin をコンパイルするため)
+        name = "ModMaven"
+        url = "https://modmaven.dev"
+    }
 }
 
 dependencies {
@@ -179,6 +183,9 @@ dependencies {
     runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:15.20.0.129")
     runtimeOnly fg.deobf("curse.maven:bookshelf-228525:5423987")
     compileOnly fg.deobf("curse.maven:bookshelf-228525:5423987")
+
+    // Planting Station 用 mixin が Mekanism API の型 (GasStack) を要る。実行時には不要
+    compileOnly fg.deobf("mekanism:Mekanism:1.20.1-10.4.16.80")
 
     compileOnly fg.deobf("curse.maven:botany-pots-353928:7612402")
     runtimeOnly fg.deobf("curse.maven:botany-pots-353928:7612402")

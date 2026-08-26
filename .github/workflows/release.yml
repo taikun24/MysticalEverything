@@ -33,6 +33,18 @@ on:
         description: 'アップロードせずビルドと検証だけ行う'
         type: boolean
         default: false
+      curseforge_upload:
+        description: 'CurseForge にアップロードする'
+        type: boolean
+        default: true
+      github_release:
+        description: 'GitHub Release を作る'
+        type: boolean
+        default: true
+      prerelease:
+        description: 'GitHub Release を pre-release として作る'
+        type: boolean
+        default: false
 
 env:
   CF_PROJECT_ID: '1596717'
@@ -45,6 +57,12 @@ jobs:
       contents: write
 
     steps:
+      - name: 公開先の指定を確かめる
+        if: ${{ !inputs.dry_run && !inputs.curseforge_upload && !inputs.github_release }}
+        run: |
+          echo "::error::curseforge_upload と github_release の両方が false です。ビルドだけしたいときは dry_run を使ってください"
+          exit 1
+
       - name: 対象ブランチの設定を決める
         id: t
         run: |
@@ -120,7 +138,7 @@ jobs:
       # CurseForge 側の採番が変わったときに黙って壊れるため。
       # このステップが通れば「トークンが有効」であることも同時に分かる。
       - name: CurseForge のゲームバージョン ID を解決する
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && inputs.curseforge_upload }}
         id: gv
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -156,7 +174,7 @@ jobs:
           echo "MC=${{ steps.t.outputs.mc }}($mc) ローダー=${{ steps.t.outputs.loader }}($loader) Java=${{ steps.t.outputs.java }}($java) Client($client) Server($server)"
 
       - name: CurseForge にアップロード
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && inputs.curseforge_upload }}
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
@@ -197,7 +215,7 @@ jobs:
           echo "アップロードしました: ${{ steps.jar.outputs.name }}"
 
       - name: GitHub Release を作る
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && inputs.github_release }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -211,6 +229,7 @@ jobs:
             --title "${{ steps.t.outputs.label }} ${{ steps.meta.outputs.version }}" \
             --notes-file changelog.md \
             --target "${{ steps.t.outputs.branch }}" \
+            ${{ inputs.prerelease && '--prerelease' || '' }} \
             "${{ steps.jar.outputs.path }}"
 
       - name: 成果物を残す

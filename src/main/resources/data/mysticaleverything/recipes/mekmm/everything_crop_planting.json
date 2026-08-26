@@ -1,0 +1,24 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        { "type": "forge:mod_loaded", "modid": "mekmm" }
+      ],
+      "recipe": {
+        "type": "mekmm:planting",
+        "itemInput": {
+          "ingredient": { "item": "mysticaleverything:everything_crop" }
+        },
+        "gasInput": {
+          "amount": 1,
+          "gas": "mekmm:nutrient_solution"
+        },
+        "mainOutput": {
+          "count": 1,
+          "item": "mysticaleverything:everything_essence"
+        }
+      }
+    }
+  ]
+}

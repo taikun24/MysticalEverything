@@ -7,6 +7,8 @@
   "mixins": [
     "astralmekanism.GreenhouseHarvestMixin",
     "botanypots.CropOverrideMixin",
+    "mekmm.PlantingRecipeOutputMixin",
+    "mekmm.PlantingChanceOutputMixin",
     "main.InfusionAlterTileEntityMixin"
   ],
   "plugin": "jp.main.taikun.mysticaleverything.mixin.MysticalEverythingMixinPlugin",
