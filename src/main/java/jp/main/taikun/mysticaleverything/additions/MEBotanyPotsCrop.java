@@ -1,5 +1,6 @@
 package jp.main.taikun.mysticaleverything.additions;
 
+import jp.main.taikun.mysticaleverything.Caches;
 import jp.main.taikun.mysticaleverything.CropResource;
 import jp.main.taikun.mysticaleverything.Mysticaleverything;
 import jp.main.taikun.mysticaleverything.TagItemHelper;
@@ -23,30 +24,55 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+/**
+ * everything_crop を Botany Pots に植えたときのレシピ。
+ * <p>
+ * 中身が同じなら完全に同じレシピになるので、インスタンスは使い回す
+ * (BotanyPots 側は SimpleDropProvider#apply で収穫物を copy してから配るので、
+ * ポット間で共有しても互いに影響しない)。
+ */
 public class MEBotanyPotsCrop extends BasicCrop {
+
+    /** 中身 → レシピ。中身の種類ぶんしか増えない。 */
+    private static final Map<CropResource, MEBotanyPotsCrop> CACHE = Caches.lru(256);
+
+    /** 種の粗いフィルタと見た目は中身によらないので、一度だけ作る。 */
+    private static Ingredient seedIngredient;
+    private static List<Display> displays;
 
     private final CropResource resource;
 
-    public MEBotanyPotsCrop(ItemStack stack) {
-        super(makeProperties(stack));
-        // resourceはmatches/couldMatch/isCacheKeyでの厳密比較用に保持
-        this.resource = TagItemHelper.getResource(stack);
+    /** 中身が同じレシピを使い回す。 */
+    public static MEBotanyPotsCrop of(ItemStack stack) {
+        final CropResource resource = TagItemHelper.getResource(stack);
+        MEBotanyPotsCrop cached = CACHE.get(resource);
+        if (cached != null) {
+            return cached;
+        }
+        final CompoundTag resourceTag = TagItemHelper.resourceToTag(resource);
+        MEBotanyPotsCrop crop = new MEBotanyPotsCrop(resource, resourceTag);
+        if (resource == CropResource.EMPTY || !resourceTag.isEmpty()) {
+            CACHE.put(resource, crop);
+        }
+        // レジストリが引けずシリアライズに失敗したものは焼き付けない (次の呼び出しで作り直す)
+        return crop;
     }
 
-    private static Properties makeProperties(ItemStack stack) {
-        final CropResource resource = TagItemHelper.getResource(stack);
+    private MEBotanyPotsCrop(CropResource resource, CompoundTag resourceTag) {
+        super(makeProperties(resourceTag));
+        // resourceはmatches/couldMatch/isCacheKeyでの厳密比較用に保持
+        this.resource = resource;
+    }
 
+    private static Properties makeProperties(final CompoundTag resourceTag) {
         final ItemStack resultStack = new ItemStack(Mysticaleverything.EVERYTHING_ESSENCE.get(), 1);
         CompoundTag tag = new CompoundTag();
-        tag.put("resource", TagItemHelper.resourceToTag(resource));
+        tag.put("resource", resourceTag);
         resultStack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
         final int growTime = 100;
-
-        final List<Display> display = List.of(
-                new AgingDisplayState(Mysticaleverything.EVERYTHING_CROP.get(), BasicOptions.ofDefault())
-        );
 
         final List<ItemDropProvider> drops = List.of(
                 new SimpleDropProvider(List.of(
@@ -56,10 +82,10 @@ public class MEBotanyPotsCrop extends BasicCrop {
 
         return new Properties(
                 // Ingredientはアイテム種類のみの粗いフィルタ。厳密判定はmatches/couldMatch/isCacheKeyで行う
-                Ingredient.of(stack.getItem()),
+                seedIngredient(),
                 BasicCrop.DIRT,
                 growTime,
-                display,
+                displays(),
                 0,              // lightLevel
                 drops,
                 Optional.empty(), // functionId
@@ -67,6 +93,21 @@ public class MEBotanyPotsCrop extends BasicCrop {
                 1.0F,           // baseYield
                 1.0F            // yieldScale
         );
+    }
+
+    private static Ingredient seedIngredient() {
+        // レジストリが凍った後にしか呼ばれない (種を見に来た時点で初期化済み)
+        if (seedIngredient == null) {
+            seedIngredient = Ingredient.of(Mysticaleverything.EVERYTHING_CROP_ITEM.get());
+        }
+        return seedIngredient;
+    }
+
+    private static List<Display> displays() {
+        if (displays == null) {
+            displays = List.of(new AgingDisplayState(Mysticaleverything.EVERYTHING_CROP.get(), BasicOptions.ofDefault()));
+        }
+        return displays;
     }
 
     /**

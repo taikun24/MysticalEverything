@@ -19,6 +19,9 @@ import org.joml.Quaternionf;
 import java.util.List;
 
 public class EverythingCropBlockEntityRenderer implements BlockEntityRenderer<EverythingCropBlockEntity>{
+    /** 2 枚目を 90 度回して十字に見せるための回転。読むだけなので使い回す。 */
+    private static final Quaternionf ROTATE_Y_90 = new Quaternionf().rotateXYZ(0, (float) Math.toRadians(90), 0);
+
     private final BlockEntityRendererProvider.Context context;
     public EverythingCropBlockEntityRenderer(BlockEntityRendererProvider.Context context){
         this.context = context;
@@ -53,7 +56,7 @@ public class EverythingCropBlockEntityRenderer implements BlockEntityRenderer<Ev
                     model
             );
 
-            poseStack.mulPose(new Quaternionf().rotateXYZ(0,(float)Math.toRadians(90),0));
+            poseStack.mulPose(ROTATE_Y_90);
             context.getItemRenderer().render(
                     itemStack,
                     ItemDisplayContext.NONE,

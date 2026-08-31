@@ -11,3 +11,7 @@
 - Support the Mekanism:More Machine Planting Station / Planting Factory (`mekmm`)
 - Fix crop contents being read as empty on a dedicated server when another mod's machine asks for them without a registry provider
 - See the wiki for how to write a filter
+- Cache the crop contents resolved from NBT, instead of rebuilding an `ItemStack` on every frame and every tick
+- Reuse the Infusion Altar recipe, the Botany Pots crop and the Planting Station output while the contents stay the same
+- `CropResource` is now immutable and built through `CropResource.of(...)`, with the display name and hash memoized
+- Drop a per-call `INFO` log from the Botany Pots hook

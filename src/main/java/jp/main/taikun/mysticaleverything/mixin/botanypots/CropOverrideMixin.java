@@ -16,12 +16,10 @@ import java.util.Optional;
 public class CropOverrideMixin {
     @Inject(method = "get", at=@At("HEAD"), cancellable=true)
     private static void getMixin(ItemStack stack, CallbackInfoReturnable<Optional<CropOverride>> cir) {
-        Mysticaleverything.LOGGER.info("CropOverrideMixin.get called with stack: " + stack);
         if (stack.getItem() == Mysticaleverything.EVERYTHING_CROP_ITEM.get()) {
-            Mysticaleverything.LOGGER.info("Returning MEBotanyPotsCrop for " + stack);
             cir.setReturnValue(Optional.of(
                     new CropOverride(
-                            new MEBotanyPotsCrop(stack)
+                            MEBotanyPotsCrop.of(stack)
                     ))
             );
             cir.cancel();

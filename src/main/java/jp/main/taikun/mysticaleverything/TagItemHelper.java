@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
@@ -13,7 +14,30 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
+
+/**
+ * {@link CropResource} と NBT の相互変換。
+ * <p>
+ * キー名は既存ワールドのアイテムに書き込まれているので変更しないこと。
+ * <p>
+ * 解決 (NBT → {@link CropResource}) は描画とレシピ判定から毎フレーム / 毎tick呼ばれる。
+ * 素直に書くと 1 回ごとに {@code CustomData#copyTag} で NBT を丸ごと複製し、
+ * さらに {@link ItemStack#parseOptional} で codec を回すことになるので、
+ * ここで結果をキャッシュして同じ中身には同じインスタンスを返す。
+ */
 public class TagItemHelper {
+
+    private static final String KEY_RESOURCE = "resource";
+
+    /**
+     * アイテムの CUSTOM_DATA → 中身。{@link CustomData} は中身で equals するので
+     * そのまま鍵に使える (= 複製せずに引ける)。
+     */
+    private static final Map<CustomData, CropResource> COMPONENT_CACHE = Caches.lru(512);
+    /** 生の NBT → 中身。ブロックエンティティ側の読み込み用。 */
+    private static final Map<CompoundTag, CropResource> TAG_CACHE = Caches.lru(256);
+
     /**
      * provider を渡してもらえない呼び出し元 (他 Mod の機械の内部処理など) 向けのフォールバック。
      * 専用サーバーでは Minecraft クラスに触れないので、まず動いているサーバーを見る。
@@ -42,28 +66,12 @@ public class TagItemHelper {
     }
 
     public static CompoundTag itemToTag(@Nullable ItemStack stack, @Nullable HolderLookup.Provider provider) {
-        if (stack == null || stack.isEmpty()) {
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putString("type", "item");
-            compoundTag.put("Item", new CompoundTag());
-            return compoundTag;
+        if (stack == null || stack.isEmpty() || provider == null) {
+            return wrap("item", "Item", new CompoundTag());
         }
-        if (provider == null) {
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putString("type", "item");
-            compoundTag.put("Item", new CompoundTag());
-            return compoundTag;
-        }
-        ItemStack copy = stack.copy();
-        if (copy.getCount() != 1) {
-            copy.setCount(1);
-        }
-        CompoundTag itemTag = new CompoundTag();
-        itemTag = (CompoundTag) copy.save(provider, itemTag);
-        CompoundTag compoundTag = new CompoundTag();
-        compoundTag.put("Item", itemTag);
-        compoundTag.putString("type", "item");
-        return compoundTag;
+        ItemStack copy = stack.copyWithCount(1);
+        CompoundTag itemTag = (CompoundTag) copy.save(provider, new CompoundTag());
+        return wrap("item", "Item", itemTag);
     }
 
     public static CompoundTag fluidToTag(@Nullable Fluid fluid) {
@@ -71,24 +79,18 @@ public class TagItemHelper {
     }
 
     public static CompoundTag fluidToTag(@Nullable Fluid fluid, @Nullable HolderLookup.Provider provider) {
-        if (fluid == null) {
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putString("type", "fluid");
-            compoundTag.put("Fluid", new CompoundTag());
-            return compoundTag;
+        if (fluid == null || provider == null) {
+            return wrap("fluid", "Fluid", new CompoundTag());
         }
-        if (provider == null) {
-            CompoundTag compoundTag = new CompoundTag();
-            compoundTag.putString("type", "fluid");
-            compoundTag.put("Fluid", new CompoundTag());
-            return compoundTag;
-        }
-        FluidStack fluidStack = new FluidStack(fluid, 1);
         CompoundTag fluidTag = new CompoundTag();
-        fluidStack.save(provider, fluidTag);
+        new FluidStack(fluid, 1).save(provider, fluidTag);
+        return wrap("fluid", "Fluid", fluidTag);
+    }
+
+    private static CompoundTag wrap(String type, String payloadKey, CompoundTag payload) {
         CompoundTag compoundTag = new CompoundTag();
-        compoundTag.put("Fluid", fluidTag);
-        compoundTag.putString("type", "fluid");
+        compoundTag.put(payloadKey, payload);
+        compoundTag.putString("type", type);
         return compoundTag;
     }
 
@@ -99,35 +101,41 @@ public class TagItemHelper {
 
     @NotNull
     public static CropResource tagToResource(@Nullable CompoundTag compoundTag, @Nullable HolderLookup.Provider provider) {
-        if (compoundTag == null || compoundTag.isEmpty()) {
+        if (compoundTag == null || compoundTag.isEmpty() || !compoundTag.contains("type")) {
             return CropResource.EMPTY;
         }
-        if (!compoundTag.contains("type")) {
+        CropResource cached = TAG_CACHE.get(compoundTag);
+        if (cached != null) {
+            return cached;
+        }
+        if (provider == null) {
+            // レジストリ無しでは解けない。失敗をキャッシュに焼き付けない
             return CropResource.EMPTY;
         }
-        String type = compoundTag.getString("type");
+        CropResource resource = parseResource(compoundTag, provider);
+        // キーは呼び出し側が持っているタグなので、後から書き換えられないよう切り離す
+        TAG_CACHE.put(compoundTag.copy(), resource);
+        return resource;
+    }
+
+    private static CropResource parseResource(@NotNull CompoundTag compoundTag, @NotNull HolderLookup.Provider provider) {
         try {
-            switch (type) {
+            switch (compoundTag.getString("type")) {
                 case "item" -> {
-                    if (compoundTag.contains("Item") && provider != null) {
-                        ItemStack itemStack = ItemStack.parseOptional(provider, compoundTag.getCompound("Item"));
-                        if (itemStack.isEmpty()) {
-                            return CropResource.EMPTY;
-                        }
-                        return new CropResource(itemStack);
+                    if (compoundTag.contains("Item")) {
+                        return CropResource.of(ItemStack.parseOptional(provider, compoundTag.getCompound("Item")));
                     }
                 }
                 case "fluid" -> {
-                    if (compoundTag.contains("Fluid") && provider != null) {
-                        FluidStack fluidStack = FluidStack.parse(
-                                provider,
-                                compoundTag.getCompound("Fluid")).get();
-                        if (fluidStack.isEmpty()) {
-                            return CropResource.EMPTY;
+                    if (compoundTag.contains("Fluid")) {
+                        FluidStack fluidStack = FluidStack.parse(provider, compoundTag.getCompound("Fluid"))
+                                .orElse(FluidStack.EMPTY);
+                        if (!fluidStack.isEmpty()) {
+                            return CropResource.of(fluidStack.getFluid());
                         }
-                        Fluid fluidType = fluidStack.getFluid();
-                        return new CropResource(fluidType);
                     }
+                }
+                default -> {
                 }
             }
         } catch (Exception e) {
@@ -143,10 +151,10 @@ public class TagItemHelper {
 
     @NotNull
     public static CropResource tagToResourceDirect(@Nullable CompoundTag compoundTag, @Nullable HolderLookup.Provider provider) {
-        if (compoundTag == null || !compoundTag.contains("resource")) {
+        if (compoundTag == null || !compoundTag.contains(KEY_RESOURCE, Tag.TAG_COMPOUND)) {
             return CropResource.EMPTY;
         }
-        return tagToResource(compoundTag.getCompound("resource"), provider);
+        return tagToResource(compoundTag.getCompound(KEY_RESOURCE), provider);
     }
 
     @NotNull
@@ -180,7 +188,21 @@ public class TagItemHelper {
         if (stack == null || stack.isEmpty()) {
             return CropResource.EMPTY;
         }
-        return tagToResourceDirect(stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag(), provider);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        if (data == null || !data.contains(KEY_RESOURCE)) {
+            return CropResource.EMPTY;
+        }
+        CropResource cached = COMPONENT_CACHE.get(data);
+        if (cached != null) {
+            return cached;
+        }
+        if (provider == null) {
+            return CropResource.EMPTY;
+        }
+        // getUnsafe は読むだけ。ここで copyTag すると毎フレーム NBT を丸ごと複製することになる
+        CropResource resource = tagToResourceDirect(data.getUnsafe(), provider);
+        COMPONENT_CACHE.put(data, resource);
+        return resource;
     }
 
     public static void setResource(@NotNull ItemStack stack, @Nullable CropResource resource) {
@@ -192,15 +214,20 @@ public class TagItemHelper {
             return;
         }
         if (resource == null || resource == CropResource.EMPTY) {
-            CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-            tag.remove("resource");
-            if (tag.isEmpty()) {
-                stack.set(DataComponents.CUSTOM_DATA, null);
+            CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+            if (data == null || !data.contains(KEY_RESOURCE)) {
+                return;
             }
-            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+            CompoundTag tag = data.copyTag();
+            tag.remove(KEY_RESOURCE);
+            if (tag.isEmpty()) {
+                stack.remove(DataComponents.CUSTOM_DATA);
+            } else {
+                stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+            }
         } else {
             CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-            tag.put("resource", resourceToTag(resource, provider));
+            tag.put(KEY_RESOURCE, resourceToTag(resource, provider));
             stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
         }
     }
@@ -210,22 +237,11 @@ public class TagItemHelper {
     }
 
     public static void setResource(@NotNull ItemStack stack, @Nullable ItemStack itemResource, @Nullable HolderLookup.Provider provider) {
-        if (itemResource == null || itemResource.isEmpty()) {
-            setResource(stack, CropResource.EMPTY, provider);
-        } else {
-            setResource(stack, new CropResource(itemResource), provider);
-        }
+        setResource(stack, CropResource.of(itemResource), provider);
     }
 
+    /** 中身が入っているか。 */
     public static boolean hasResource(@Nullable ItemStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return false;
-        }
-        CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        if (!tag.contains("resource")) {
-            return false;
-        }
-        CropResource resource = getResource(stack);
-        return resource != CropResource.EMPTY;
+        return getResource(stack) != CropResource.EMPTY;
     }
 }

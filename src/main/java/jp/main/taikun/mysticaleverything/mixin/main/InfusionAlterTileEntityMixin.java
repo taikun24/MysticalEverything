@@ -16,6 +16,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -25,6 +26,22 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public class InfusionAlterTileEntityMixin {
     @Unique
     private static final ItemStack REQUIRED_ESSENCE = Mysticaleverything.EVERYTHING_CATALYST.get().getDefaultInstance();
+
+    /**
+     * 直前に組み立てたレシピ。{@code getActiveRecipe} は毎tick呼ばれるが、
+     * 触媒の中身が変わらない限り同じレシピにしかならないので使い回す
+     * (中身ごとに Ingredient 9 個と ItemStack を作り直すと、置いてあるだけで
+     * 毎tickゴミが出る)。
+     */
+    @Unique
+    @Nullable
+    private CropResource mysticaleverything$cachedResource;
+    @Unique
+    private boolean mysticaleverything$cachedIgnoreNBT;
+    @Unique
+    @Nullable
+    private InfusionRecipe mysticaleverything$cachedRecipe;
+
     @Redirect(
             method = "getActiveRecipe"
             ,
@@ -37,68 +54,97 @@ public class InfusionAlterTileEntityMixin {
     public Recipe<?> getActiveRecipeRedirect(CachedRecipe<CraftingInput, IInfusionRecipe> instance, RecipeInput inventory, Level level) {
         if (inventory.isEmpty()) return null;
         Recipe<?> recipe = instance.checkAndGet((CraftingInput) inventory, level);
-
-        if (recipe == null && mysticaleverything$isPatternValid(inventory, level)) {
-            NonNullList<Ingredient> stacks = NonNullList.create();
-            Ingredient stack = (Ingredient.of(ModItems.PROSPERITY_SEED_BASE.get().getDefaultInstance()));
-            ItemStack catalyst = inventory.getItem(5);
-            CropResource resource = TagItemHelper.getResource(catalyst, level.registryAccess());
-            if (resource == CropResource.EMPTY) return recipe;
-            ItemStack ing = resource.getItem();
-            for (int i = 0; i < 4; i++) {
-                stacks.add(Ingredient.of(REQUIRED_ESSENCE));
-                stacks.add(Ingredient.of(ing));
-            }
-            ItemStack outputItem = Mysticaleverything.EVERYTHING_CROP.get().asItem().getDefaultInstance();
-            outputItem.setCount(1);
-            if (Config.disableNBT(ing)) {
-                ing = new ItemStack(ing.getItem(), 1);
-                TagItemHelper.setResource(outputItem, ing, level.registryAccess());
-            } else {
-                TagItemHelper.setResource(outputItem, resource, level.registryAccess());
-            }
-            return new InfusionRecipe(
-                    stack,
-                    stacks,
-                    outputItem,
-                    false
-            );
+        if (recipe != null) {
+            return recipe;
         }
-        return recipe;
+        CropResource resource = mysticaleverything$findPatternResource(inventory, level);
+        if (resource == null) {
+            return null;
+        }
+        return mysticaleverything$recipeFor(resource, level);
     }
+
+    /** 中身ごとの種インフュージョンレシピ。同じ中身なら作り直さない。 */
+    @Unique
+    private InfusionRecipe mysticaleverything$recipeFor(CropResource resource, Level level) {
+        ItemStack ingredient = resource.getItem();
+        boolean ignoreNBT = Config.disableNBT(ingredient);
+        InfusionRecipe cached = this.mysticaleverything$cachedRecipe;
+        if (cached != null
+                && this.mysticaleverything$cachedIgnoreNBT == ignoreNBT
+                && resource.equals(this.mysticaleverything$cachedResource)) {
+            return cached;
+        }
+
+        NonNullList<Ingredient> stacks = NonNullList.create();
+        Ingredient essence = Ingredient.of(REQUIRED_ESSENCE);
+        // Ingredient は渡したスタックを保持するので、共有インスタンスは切り離して渡す
+        Ingredient crop = Ingredient.of(ingredient.copy());
+        for (int i = 0; i < 4; i++) {
+            stacks.add(essence);
+            stacks.add(crop);
+        }
+
+        ItemStack outputItem = Mysticaleverything.EVERYTHING_CROP.get().asItem().getDefaultInstance();
+        outputItem.setCount(1);
+        TagItemHelper.setResource(outputItem, ignoreNBT
+                        ? CropResource.of(new ItemStack(ingredient.getItem()))
+                        : resource,
+                level.registryAccess());
+
+        InfusionRecipe built = new InfusionRecipe(
+                Ingredient.of(ModItems.PROSPERITY_SEED_BASE.get().getDefaultInstance()),
+                stacks,
+                outputItem,
+                false
+        );
+        this.mysticaleverything$cachedResource = resource;
+        this.mysticaleverything$cachedIgnoreNBT = ignoreNBT;
+        this.mysticaleverything$cachedRecipe = built;
+        return built;
+    }
+
     @Unique
     public boolean mysticaleverything$doesntMatchItem(RecipeInput inventory, int slot, ItemStack itemStack){
         return !ItemStack.isSameItemSameComponents(inventory.getItem(slot), itemStack);
     }
+
+    /**
+     * 祭壇に「種の素 + 触媒 4 + everything_catalyst 4」が正しく並んでいるか調べ、
+     * 並んでいれば触媒の中身を返す。並んでいなければ {@code null}。
+     */
     @Unique
-    public boolean mysticaleverything$isPatternValid(RecipeInput inventory, Level level) {
+    @Nullable
+    public CropResource mysticaleverything$findPatternResource(RecipeInput inventory, Level level) {
+        if (inventory.size() != 9) return null;
         if (mysticaleverything$doesntMatchItem(inventory, 0, ModItems.PROSPERITY_SEED_BASE.get().getDefaultInstance())) {
-            return false;
+            return null;
         }
-        if (inventory.size() != 9) return false;
-        int[] essenceIndex = new int[]{1, 2, 3, 4};
-        int[] ingredientIndex = new int[]{5, 6, 7, 8};
-        
-        ItemStack firstCatalyst = inventory.getItem(ingredientIndex[0]);
-        if (firstCatalyst.isEmpty()) return false;
-        
+
+        ItemStack firstCatalyst = inventory.getItem(5);
+        if (!firstCatalyst.is(Mysticaleverything.COMPRESSION_CATALYST.get())) {
+            return null;
+        }
         CropResource firstResource = TagItemHelper.getResource(firstCatalyst, level.registryAccess());
-        if (firstResource == CropResource.EMPTY) return false;
-        if (!Config.filter(firstResource.getItem())) return false;
+        if (firstResource == CropResource.EMPTY || firstResource.getType() != CropResource.TYPE.ITEM) {
+            return null;
+        }
+        if (!Config.filter(firstResource.getItem())) {
+            return null;
+        }
 
         for (int i = 0; i < 4; i++) {
-            if (!inventory.getItem(essenceIndex[i]).is(REQUIRED_ESSENCE.getItem())) {
-                return false;
+            if (!inventory.getItem(1 + i).is(REQUIRED_ESSENCE.getItem())) {
+                return null;
             }
-            ItemStack currentCatalyst = inventory.getItem(ingredientIndex[i]);
+            ItemStack currentCatalyst = inventory.getItem(5 + i);
             if (!currentCatalyst.is(Mysticaleverything.COMPRESSION_CATALYST.get())) {
-                return false;
+                return null;
             }
-            CropResource currentResource = TagItemHelper.getResource(currentCatalyst, level.registryAccess());
-            if (!firstResource.equals(currentResource)) {
-                return false;
+            if (!firstResource.equals(TagItemHelper.getResource(currentCatalyst, level.registryAccess()))) {
+                return null;
             }
         }
-        return true;
+        return firstResource;
     }
 }
