@@ -25,7 +25,7 @@ public class CropOverrideMixin {
                                                              ItemStack stack, CallbackInfoReturnable<Crop> cir) {
         if (stack.is(Mysticaleverything.EVERYTHING_CROP_ITEM.get())) {
             // setReturnValue が cancel も兼ねる
-            cir.setReturnValue(new MEBotanyPotsCrop(stack));
+            cir.setReturnValue(MEBotanyPotsCrop.of(stack));
         }
     }
 }

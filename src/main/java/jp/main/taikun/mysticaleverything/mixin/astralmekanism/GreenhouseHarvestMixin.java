@@ -5,9 +5,11 @@ import jp.main.taikun.mysticaleverything.Mysticaleverything;
 import jp.main.taikun.mysticaleverything.TagItemHelper;
 import net.darkhax.botanypots.data.recipes.crop.HarvestEntry;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -41,6 +43,20 @@ public abstract class GreenhouseHarvestMixin {
     @Shadow
     private List<HarvestEntry> harvestEntries;
 
+    /**
+     * 直前に刻んだ結果。同じ収穫物リスト・同じ中身なら作り直さない。
+     * 収穫のたびにリストと ItemStack を作り直すと、動いているだけでゴミが出る。
+     */
+    @Unique
+    @Nullable
+    private List<HarvestEntry> mysticaleverything$stampedFrom;
+    @Unique
+    @Nullable
+    private List<HarvestEntry> mysticaleverything$stamped;
+    @Unique
+    @Nullable
+    private CropResource mysticaleverything$stampedResource;
+
     @Inject(method = "finishProcessing(I)V", at = @At("HEAD"))
     private void mysticaleverything$applyCropResource(int operations, CallbackInfo ci) {
         if (cropStack == null || !cropStack.is(Mysticaleverything.EVERYTHING_CROP_ITEM.get())) {
@@ -50,6 +66,13 @@ public abstract class GreenhouseHarvestMixin {
         if (resource == CropResource.EMPTY) {
             // 中身の無い種。空リストにしておけば finishProcessing が何も消費せず抜ける
             harvestEntries = List.of();
+            return;
+        }
+        List<HarvestEntry> source = harvestEntries;
+        if (resource == mysticaleverything$stampedResource
+                && (source == mysticaleverything$stampedFrom || source == mysticaleverything$stamped)
+                && mysticaleverything$stamped != null) {
+            harvestEntries = mysticaleverything$stamped;
             return;
         }
         List<HarvestEntry> stamped = new ArrayList<>(harvestEntries.size());
@@ -63,6 +86,9 @@ public abstract class GreenhouseHarvestMixin {
             TagItemHelper.setResource(essence, resource);
             stamped.add(new HarvestEntry(entry.getChance(), essence, entry.getMinRolls(), entry.getMaxRolls()));
         }
+        mysticaleverything$stampedFrom = source;
+        mysticaleverything$stampedResource = resource;
+        mysticaleverything$stamped = stamped;
         harvestEntries = stamped;
     }
 }

@@ -25,8 +25,27 @@ public abstract class PlantingChanceOutputMixin implements IPlantingResourceHold
     @Nullable
     private CropResource mysticaleverything$resource;
 
+    /**
+     * 中身を刻んだ結果。{@code getMainOutput} などは出力スロットの空き判定のために
+     * 毎tick呼ばれるので、同じ中身のあいだは作り直さない。
+     * <p>
+     * 素の出力 ({@code mekmm} 側のフィールド) をそのまま鍵にすることで、
+     * main / secondary を取り違えずに済む。
+     */
+    @Unique
+    @Nullable
+    private ItemStack mysticaleverything$stampedFrom;
+    @Unique
+    @Nullable
+    private ItemStack mysticaleverything$stamped;
+
     @Override
     public void mysticaleverything$setResource(@Nullable CropResource resource) {
+        if (resource != this.mysticaleverything$resource) {
+            // 中身が変わったら刻み直す
+            this.mysticaleverything$stampedFrom = null;
+            this.mysticaleverything$stamped = null;
+        }
         this.mysticaleverything$resource = resource;
     }
 
@@ -53,8 +72,14 @@ public abstract class PlantingChanceOutputMixin implements IPlantingResourceHold
             cir.setReturnValue(ItemStack.EMPTY);
             return;
         }
+        if (output == this.mysticaleverything$stampedFrom && this.mysticaleverything$stamped != null) {
+            cir.setReturnValue(this.mysticaleverything$stamped);
+            return;
+        }
         ItemStack essence = output.copy();
         TagItemHelper.setResource(essence, resource);
+        this.mysticaleverything$stampedFrom = output;
+        this.mysticaleverything$stamped = essence;
         cir.setReturnValue(essence);
     }
 }
