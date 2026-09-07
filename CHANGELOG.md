@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4-hotfix1
+- The default `filterJson` no longer restricts crops to ores; it now allows every item (`{"type": "and", "filters": []}`)
+  - The ore filter was only ever a sample value, and it only took effect once `useCustomFilter` was turned on -- turning that switch on used to silently restrict crops to ores
+  - Existing configs are untouched. Set `filterJson` yourself if you want the old behaviour
+- Config comments now say which switch activates each filter
+
 ## 1.0.4
 - Support the Mekanism:More Machine Planting Station / Planting Factory (`mekmm`)
 - The item filter is now applied to the Compression Catalyst crafting recipe as well

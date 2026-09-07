@@ -30,10 +30,10 @@ public class Config {
         DISABLE_NBT = BUILDER.comment("NBTも含めて作物にするか？(true→いいえ)").define("disableNBT", true);
         USE_CUSTOM_FILTER = BUILDER.comment("JSONによるカスタムフィルターを使うか？(true→使う)").define("useCustomFilter", false);
         FILTER_WHITELIST = BUILDER.comment("フィルターをホワイトリストにするか？(true→ホワイトリスト)").define("filterWhitelist", true);
-        FILTER_JSON = BUILDER.comment("作物にするアイテムのフィルターJSON。例: {\"type\": \"tag\", \"tag\": \"forge:ores\"}").define("filterJson", "{\"type\": \"tag\", \"tag\": \"forge:ores\"}");
+        FILTER_JSON = BUILDER.comment("作物にするアイテムのフィルターJSON。useCustomFilter=true のときだけ使う。既定は全アイテム許可。例: {\"type\": \"tag\", \"tag\": \"forge:ores\"}").define("filterJson", "{\"type\": \"and\", \"filters\": []}");
         USE_NBT_FILTER = BUILDER.comment("disableNBT をアイテムごとに切り替えるフィルターを使うか？(true→使う)").define("useNBTFilter", false);
         NBT_FILTER_WHITELIST = BUILDER.comment("NBTフィルターをホワイトリストにするか？(true→ホワイトリスト)").define("nbtFilterWhitelist", true);
-        NBT_FILTER_JSON = BUILDER.comment("このフィルターに当たったアイテムだけ disableNBT が逆になる。例: {\"type\": \"tag\", \"tag\": \"forge:tools\"}").define("nbtFilterJson", "{\"type\": \"nbt_has_any\"}");
+        NBT_FILTER_JSON = BUILDER.comment("このフィルターに当たったアイテムだけ disableNBT が逆になる。useNBTFilter=true のときだけ使う。例: {\"type\": \"tag\", \"tag\": \"forge:tools\"}").define("nbtFilterJson", "{\"type\": \"nbt_has_any\"}");
         BUILDER.pop();
         CONFIG_SPEC = BUILDER.build();
     }
