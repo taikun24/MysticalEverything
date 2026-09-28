@@ -9,6 +9,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.material.Fluid;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.NotNull;
@@ -50,6 +51,10 @@ public class TagItemHelper {
             }
         } catch (Throwable ignored) {
             // Not running a server (integrated or dedicated) right now.
+        }
+        if (!FMLEnvironment.dist.isClient()) {
+            // 専用サーバーでは Minecraft クラスを読み込んだ時点で RuntimeDistCleaner に弾かれる
+            return null;
         }
         try {
             if (Minecraft.getInstance().level != null) {

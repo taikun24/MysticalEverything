@@ -2,7 +2,10 @@
 
 このブランチ (NeoForge 1.21.1) の changelog は 1.0.4 から記録しています。
 
-## Unreleased
+## 1.0.4-hotfix1
+- Fix the dedicated server crashing on startup (`Attempted to load class net/minecraft/client/model/Model for invalid dist DEDICATED_SERVER`)
+  - The Everything Crop item still implemented a client-only interface left over from the Forge port
+- Stop touching the client `Minecraft` class on a dedicated server when looking up crop contents
 - The default `filterJson` no longer restricts crops to ores; it now allows every item (`{"type": "and", "filters": []}`)
   - The ore filter was only ever a sample value, and it only took effect once `useCustomFilter` was turned on -- turning that switch on used to silently restrict crops to ores
   - Existing configs are untouched. Set `filterJson` yourself if you want the old behaviour

@@ -1,18 +1,15 @@
 package jp.main.taikun.mysticaleverything;
 
 
-import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemNameBlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.Consumer;
 
-public class EverythingCropItem extends ItemNameBlockItem implements IClientItemExtensions {
+public class EverythingCropItem extends ItemNameBlockItem {
     public EverythingCropItem() {
         super(Mysticaleverything.EVERYTHING_CROP.get(), new Item.Properties().rarity(Rarity.EPIC));
     }

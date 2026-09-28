@@ -96,6 +96,7 @@ dependencies {
 }
 
 tasks.withType(ProcessResources).configureEach {
+    filteringCharset = 'UTF-8'
     var replaceProperties = [
             minecraft_version      : minecraft_version,
             minecraft_version_range: minecraft_version_range,
