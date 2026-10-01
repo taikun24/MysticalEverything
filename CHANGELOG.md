@@ -2,6 +2,10 @@
 
 このブランチ (NeoForge 1.21.1) の changelog は 1.0.4 から記録しています。
 
+## 1.0.4-hotfix2
+- Fix the client crashing when a crafting grid is checked while empty, e.g. when opening an AE2 Crafting Terminal (`IndexOutOfBoundsException` in the Compression Catalyst recipe)
+- Drop a leftover debug log from the Compression Catalyst recipe
+
 ## 1.0.4-hotfix1
 - Fix the dedicated server crashing on startup (`Attempted to load class net/minecraft/client/model/Model for invalid dist DEDICATED_SERVER`)
   - The Everything Crop item still implemented a client-only interface left over from the Forge port

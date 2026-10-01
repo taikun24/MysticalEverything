@@ -23,8 +23,10 @@ public class ItemCompressionRecipe extends CustomRecipe {
 
     @Override
     public boolean matches(CraftingInput container, @NotNull Level level) {
+        // CraftingInput は空の行・列を詰めるので、空のグリッドは size 0 になる。
+        // getItem より先にサイズを見ないと IndexOutOfBoundsException で落ちる。
+        if (container.size() != 9) return false;
         if (container.getItem(0).isEmpty()) return false;
-        if(container.size() != 9)  return false;
         ItemStack catalyst = container.getItem(4);
         if (catalyst.is(Mysticaleverything.COMPRESSION_CATALYST.get())) {
             if (TagItemHelper.hasResource(catalyst)) return false;
@@ -55,7 +57,6 @@ public class ItemCompressionRecipe extends CustomRecipe {
         if (Config.disableNBT(first)) {
             first = first.copy();
             first.set(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
-            Mysticaleverything.LOGGER.info("hi");
         }
         ItemStack catalyst = new ItemStack(Mysticaleverything.COMPRESSION_CATALYST.get());
         TagItemHelper.setResource(catalyst, first, access);
